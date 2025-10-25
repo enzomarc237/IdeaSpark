@@ -4,6 +4,7 @@ export interface Note {
   title: string;
   content: string;
   createdAt: string;
+  isGenerated?: boolean;
 }
 
 export interface ChatMessage {

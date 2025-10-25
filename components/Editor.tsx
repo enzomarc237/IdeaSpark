@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Note } from '../types';
 import { generateIdeasFromNote, generateIdeasFromQuery, refineNote } from '../services/geminiService';
@@ -91,7 +92,7 @@ export const Editor: React.FC<EditorProps> = ({ note, onChange, onGenerateDocs, 
                     </button>
                      <button onClick={onGenerateDocs} className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                         <DocumentIcon className="w-5 h-5" />
-                        <span>Gen Docs</span>
+                        <span>Create PRD & Plan</span>
                     </button>
                      <button onClick={() => onExport('md')} className="flex items-center space-x-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors">
                         <DownloadIcon className="w-5 h-5" />

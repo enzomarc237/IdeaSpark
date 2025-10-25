@@ -57,7 +57,7 @@ export const generateDocuments = async (idea: string): Promise<{ prd: string; de
   
   Idea: "${idea}"
   
-  Format the output strictly as a single JSON object with two keys: "prd" and "devPlan". The value for each key should be a markdown-formatted string.`;
+  Structure your response in markdown. Start with a level 1 heading "# Product Requirements Document (PRD)" followed by the PRD content. Then, use another level 1 heading "# Development Plan" followed by the development plan content. Do not include any other text before or after these sections.`;
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
@@ -65,24 +65,29 @@ export const generateDocuments = async (idea: string): Promise<{ prd: string; de
         config: {
             tools: [{ googleSearch: {} }],
             thinkingConfig: { thinkingBudget: 32768 },
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    prd: { type: Type.STRING },
-                    devPlan: { type: Type.STRING },
-                },
-                required: ['prd', 'devPlan'],
-            },
         },
     });
 
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-    const parsed = JSON.parse(response.text);
+    const responseText = response.text;
     
+    const devPlanMarker = '# Development Plan';
+    const prdMarker = '# Product Requirements Document (PRD)';
+    
+    const parts = responseText.split(devPlanMarker);
+
+    if (parts.length < 2) {
+        // Fallback if the marker is not found or the response is not as expected
+        const prdContent = responseText.replace(prdMarker, '').trim();
+        return { prd: prdContent, devPlan: "Could not generate a separate development plan.", sources };
+    }
+    
+    const prdContent = parts[0].replace(prdMarker, '').trim();
+    const devPlanContent = parts.slice(1).join(devPlanMarker).trim();
+
     return {
-        prd: parsed.prd,
-        devPlan: parsed.devPlan,
+        prd: prdContent,
+        devPlan: devPlanContent,
         sources: sources,
     };
 };

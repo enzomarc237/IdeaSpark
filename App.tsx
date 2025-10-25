@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Note, View, ChatMessage } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -80,22 +81,34 @@ const App: React.FC = () => {
         setLoadingMessage('Generating PRD & Dev Plan with Gemini Pro...');
         try {
             const { prd, devPlan, sources } = await generateDocuments(activeNote.content);
+            
+            let sourcesMarkdown = '';
+            if (sources && sources.length > 0) {
+                sourcesMarkdown = '\n\n---\n\n### Sources\n';
+                sources.forEach((source: any) => {
+                    if (source.web) {
+                        sourcesMarkdown += `- [${source.web.title || source.web.uri}](${source.web.uri})\n`;
+                    }
+                });
+            }
+
             const prdNote: Note = {
                 id: crypto.randomUUID(),
                 title: `PRD for ${activeNote.title}`,
-                content: prd,
+                content: prd + sourcesMarkdown,
                 createdAt: new Date().toISOString(),
+                isGenerated: true,
             };
             const devPlanNote: Note = {
                 id: crypto.randomUUID(),
                 title: `Dev Plan for ${activeNote.title}`,
-                content: devPlan,
+                content: devPlan + sourcesMarkdown,
                 createdAt: new Date().toISOString(),
+                isGenerated: true,
             };
             setNotes(prev => [prdNote, devPlanNote, ...prev]);
             setActiveNoteId(prdNote.id);
-            console.log("Sources:", sources);
-            alert("Documents generated successfully from idea: '" + activeNote.title + "'!");
+            alert(`Successfully generated PRD and Development Plan for "${activeNote.title}". You can find them as new notes in your sidebar.`);
         } catch (error) {
             console.error("Failed to generate documents:", error);
             alert("An error occurred while generating documents.");
@@ -140,17 +153,22 @@ const App: React.FC = () => {
     };
 
     const handleImportFromUrl = async () => {
-        const url = prompt("Please enter the URL of the markdown or text file to import:");
+        const url = prompt("Please enter the public URL of the raw markdown or text file to import (e.g., from a GitHub Gist):");
         if (!url) return;
+
+        // Use a CORS proxy to bypass browser's same-origin policy
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 
         setIsLoading(true);
         setLoadingMessage(`Importing from ${url}...`);
         try {
-            const response = await fetch(url);
+            const response = await fetch(proxyUrl);
             if (!response.ok) {
-                throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch through proxy: ${response.status} ${response.statusText} - ${errorText}`);
             }
             const content = await response.text();
+            // We use the original URL to derive the title
             const pathParts = new URL(url).pathname.split('/');
             const lastPart = pathParts.pop() || 'imported-note';
             const title = lastPart.replace(/\.(md|txt)$/, '');
@@ -159,7 +177,7 @@ const App: React.FC = () => {
 
         } catch (error) {
             console.error("Failed to import from URL:", error);
-            alert(`An error occurred while importing from the URL. This might be due to CORS policy restrictions. Check the console for more details.`);
+            alert(`An error occurred while importing from the URL. The URL might be invalid or the server might be down. Check the console for more details.`);
         } finally {
             setIsLoading(false);
             setLoadingMessage('');
